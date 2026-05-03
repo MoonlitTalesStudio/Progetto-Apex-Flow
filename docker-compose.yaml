@@ -1,0 +1,37 @@
+services:
+  # Il cuore della memoria rapida
+  redis:
+    image: redis:alpine
+    container_name: apex_redis
+    ports:
+      - "6379:6379"
+
+  # Il magazzino dei dati persistenti
+  db:
+    image: postgres:15-alpine
+    container_name: apex_db
+    environment:
+      POSTGRES_USER: moonlit
+      POSTGRES_PASSWORD: moonlit_tales
+      POSTGRES_DB: apex_database
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Il tuo motore Python
+  backend:
+    build: ./backend-api
+    container_name: apex_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend-api:/app  # Collega il tuo codice in tempo reale
+    environment:
+      DATABASE_URL: postgresql://moonlit:moonlit_tales@db:5432/apex_database
+      REDIS_URL: redis://redis:6379
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload # L'opzione --reload è la chiave
+
+# --- QUESTA È LA PARTE MANCANTE ---
+volumes:
+  postgres_data:

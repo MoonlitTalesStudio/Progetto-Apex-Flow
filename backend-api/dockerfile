@@ -1,0 +1,22 @@
+# Usa Python versione 3.12 (leggera)
+FROM python:3.12-slim
+
+# Evita sprechi di spazio e ottimizza i log
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Crea la cartella di lavoro dentro il container
+WORKDIR /app
+
+# Installa dipendenze di sistema per Postgres (necessarie per psycopg2)
+RUN apt-get update && apt-get install -y libpq-dev gcc && rm -rf /var/lib/apt/lists/*
+
+# Copia la lista delle librerie e installale
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copia tutto il tuo codice (main.py, ecc.) nella cartella /app
+COPY . .
+
+# Accendi il server FastAPI
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
