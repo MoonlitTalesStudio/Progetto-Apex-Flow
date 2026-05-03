@@ -9,11 +9,19 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    
+    # Questi permessi sono necessari per permettere al bot di creare release e tag
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Fondamentale per permettere a semantic-release di leggere la cronologia dei commit
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
