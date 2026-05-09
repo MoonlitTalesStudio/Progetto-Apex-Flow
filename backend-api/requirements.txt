@@ -2,7 +2,10 @@ fastapi
 uvicorn[standard]
 redis
 psycopg2-binary
-sqlalchemy   
+sqlalchemy>=2.0.0
+asyncpg
+greenlet 
 pydantic
 pytest
 httpx
+sqlmodel

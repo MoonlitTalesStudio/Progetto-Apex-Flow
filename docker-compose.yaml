@@ -1,12 +1,12 @@
 services:
-  # Il cuore della memoria rapida
+
   redis:
-    image: redis:alpine
+    image: redis/redis-stack-server:latest
     container_name: apex_redis
     ports:
       - "6379:6379"
 
-  # Il magazzino dei dati persistenti
+  
   db:
     image: postgres:15-alpine
     container_name: apex_db
@@ -18,20 +18,35 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moonlit -d apex_database"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  # Il tuo motore Python
+  
   backend:
-    build: ./backend-api
+    build: 
+      context: ./backend-api
+      dockerfile: Dockerfile
     container_name: apex_backend
     ports:
       - "8000:8000"
     volumes:
-      - ./backend-api:/app  # Collega il tuo codice in tempo reale
+      - ./backend-api:/app 
     environment:
-      DATABASE_URL: postgresql://moonlit:moonlit_tales@db:5432/apex_database
+      DATABASE_URL: postgresql+asyncpg://moonlit:moonlit_tales@db:5432/apex_database
       REDIS_URL: redis://redis:6379
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload # L'opzione --reload è la chiave
+      PYTHONDONTWRITEBYTECODE: 1
+      PYTHONUNBUFFERED: 1
+    
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
-# --- QUESTA È LA PARTE MANCANTE ---
 volumes:
   postgres_data:

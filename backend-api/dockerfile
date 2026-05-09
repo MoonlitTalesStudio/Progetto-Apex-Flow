@@ -1,22 +1,38 @@
-# Usa Python versione 3.12 (leggera)
-FROM python:3.12-slim
+# STAGE 1: Builder
+FROM python:3.12-slim AS builder
 
-# Evita sprechi di spazio e ottimizza i log
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+# Correzione sintassi ENV
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Crea la cartella di lavoro dentro il container
 WORKDIR /app
 
-# Installa dipendenze di sistema per Postgres (necessarie per psycopg2)
+# Installiamo i tool di compilazione
 RUN apt-get update && apt-get install -y libpq-dev gcc && rm -rf /var/lib/apt/lists/*
 
-# Copia la lista delle librerie e installale
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia tutto il tuo codice (main.py, ecc.) nella cartella /app
+# IMPORTANTE: Usiamo --prefix per isolare le installazioni
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+
+# STAGE 2: Runtime
+FROM python:3.12-slim
+WORKDIR /app
+
+# Installiamo solo la libreria runtime per Postgres (senza i tool di compilazione come gcc)
+RUN apt-get update && apt-get install -y libpq5 && rm -rf /var/lib/apt/lists/*
+
+# Creiamo l'utente sicuro
+RUN addgroup --system appgroup && adduser --system --group appuser
+
+# Copiamo le librerie dallo stage builder
+COPY --from=builder /install /usr/local
+
+# Copiamo il codice e sistemiamo i permessi
 COPY . .
+RUN chown -R appuser:appgroup /app
 
-# Accendi il server FastAPI
+USER appuser
+
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
